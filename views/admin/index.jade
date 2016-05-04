@@ -1,0 +1,221 @@
+extends ../layout
+
+block content
+  script.
+    $(document).ready(function() {
+      $('p.save-success').hide();
+      $('p.save-error').hide();
+
+      $("#textColor").spectrum({
+        preferredFormat: "hex",
+        showInput: true,
+        color: "#{form.textColor}"
+      })
+
+      $('input[name="automatic-add-watermark"]').change(function() {
+        $.ajax({
+          url: '/admin/automatic-add-watermark',
+          type: 'post',
+          success: function() {},
+          error: function() {
+            alert('Error while change this setting. We are working on it');
+          }
+        });
+      });
+
+      function checkFormAndUpdatePreviewImage() {
+        $('#previewImage').block();
+        var formData = getWatermarkFormData();
+        $.ajax({
+          url: '/admin',
+          data: formData,
+          type: 'post',
+          success: function(data) {
+            $('#previewImage').attr('src', 'data:image/jpeg;base64,' + data)
+          },
+          error: function(err) {
+            alert('Error while making preview image');
+          },
+          complete: function() {
+            $('#previewImage').unblock();
+          }
+        });
+      }
+
+      $('form[name="watermarkConfig"] input, form[name="watermarkConfig"] select').change(function() {
+        checkFormAndUpdatePreviewImage();
+      });
+
+      $('form[name="watermarkConfig"]').submit(function(e) {
+        e.preventDefault();
+        return false;
+      })
+
+
+      function getWatermarkFormData(){
+        var formData = {};
+        $('form[name="watermarkConfig"] input, form[name="watermarkConfig"] select').each(function(index, field) {
+          var name = $(field).attr('name');
+          var value = $(field).val();
+          formData[name] = value;
+        });
+        formData['updateWatermark'] = $('input[name="updateWatermark"]').is(':checked')
+        return formData;
+      }
+
+      $('#btnApply').click(function(e) {
+        e.preventDefault;
+        var formData = getWatermarkFormData();
+        $.blockUI({message: 'Just a moment...'})
+        $.ajax({
+          url: '/admin/save-watermark',
+          data: formData,
+          type: 'post',
+          success: function() {
+            $('p.save-success').show();
+            $('p.save-error').hide();
+          },
+          error: function(err) {
+            console.log(err);
+            $('p.save-success').hide();
+            $('p.save-error').show();
+            $('p.save-error').text(err.responseText);
+          },
+          complete: function() {
+            $.unblockUI();
+          }
+        })
+
+
+        return false;
+      });
+
+      $('.position-container .btn[data-position="#{form.position}"]').addClass('active');
+
+      $('.position-container .btn').click(function(e) {
+        e.preventDefault();
+        var position = $(this).data('position');
+        $('input[name="position"]').val(position);
+        $('.position-container .btn').removeClass('active');
+        $(this).addClass('active');
+        checkFormAndUpdatePreviewImage();
+        return false;
+      });
+
+      $('input[name="opacity"]').slider({
+        min:0,
+        max: 100,
+        step: 1,
+        value: #{form.opacity}
+      });
+
+
+      $('#btnRestore').click(function(e) {
+        e.preventDefault();
+        var restore = confirm('This action will remove watermark from ALL of your images. Do you want to continue?');
+        if (restore) {
+          $.blockUI({message: 'Just a moment...'})
+          $.ajax({
+            url: '/admin/remove-watermark',
+            type: 'post',
+            success: function() {
+              alert('Watermark will be removed from your images in few minutes')
+            },
+            error: function() {
+              alert('Can not restore images at this moment. Please try again later.');
+            },
+            complete: function() {
+              $.unblockUI()
+            }
+          })
+        }
+        return false;
+      })
+
+    });
+  .container
+    .row
+      .col-md-12
+        h1 Watermark configuration
+    .row
+      .col-md-6
+
+        form(name='watermarkConfig' method='post')
+          .form-group
+            label Text
+            input(type='text' name='text' class='form-control' value="#{form.text}")
+          .form-group
+            label Font size
+            input(type='number' name='fontSize' class='form-control' value="#{form.fontSize}")
+          .form-group
+            label Font name
+            select(name='fontName' class='form-control')
+              for font in fontNames
+                option(value="#{font}" selected=form.fontName == font) #{font}
+          .form-group
+            label Text Color &nbsp;
+            br
+            input(type='text' name='textColor' id='textColor' value="#{form.textColor}")
+          .form-group
+            label Text position
+            input(type='hidden' value='#{form.position}' name='position')
+            .position-container
+              table
+                tr
+                  td
+                    .btn.btn-default(data-position='top-left')
+                      i.fa.fa-arrow-left.top-left
+                  td
+                    .btn.btn-default(data-position='top')
+                      i.fa.fa-arrow-left.top
+                  td
+                    .btn.btn-default(data-position='top-right')
+                      i.fa.fa-arrow-left.top-right
+                tr
+                  td
+                    .btn.btn-default(data-position='left')
+                      i.fa.fa-arrow-left.left
+                  td
+                    .btn.btn-default(data-position='middle')
+                      i.fa.fa-circle
+                  td
+                    .btn.btn-default(data-position='right')
+                      i.fa.fa-arrow-left.right
+                tr
+                  td
+                    .btn.btn-default(data-position='bottom-left')
+                      i.fa.fa-arrow-left.bottom-left
+                  td
+                    .btn.btn-default(data-position='bottom')
+                      i.fa.fa-arrow-left.bottom
+                  td
+                    .btn.btn-default(data-position='bottom-right')
+                      i.fa.fa-arrow-left.bottom-right
+
+          .form-group
+            label Opacity
+            br
+            input(type='text' name='opacity' value='#{form.opacity}')
+
+          .form-group
+            .checkbox
+              label
+                input(type='checkbox' name='updateWatermark')
+                | Update this watermark to watermarked images
+
+        button(value='apply' name='apply' class='btn btn-success btn-large' id='btnApply') Save watermark
+        p.save-success.text-success Success! Your watermark configuration is saved.
+        p.save-error.text-danger Error
+      .col-md-6
+        img(src='#{previewImageUrl}' class='img-responsive img-thumbnail' id='previewImage')
+
+
+    .row
+      .col-md-12
+        .well.footer-form
+          form
+            .checkbox.col-md-6
+              label
+                input(type="checkbox" name="automatic-add-watermark")
+                | Automatically add watermark for new images
+            a#btnRestore.btn.btn-default.pull-right Restore your images

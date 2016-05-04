@@ -1,0 +1,29 @@
+extends ../layout
+
+block content
+  .container
+    .row
+      .col-md-12
+        h1 Product list
+    .row
+      .col-md-12
+        table
+          tbody
+            thead
+              tr
+                th
+                th Product name
+                th Unwatermarked images
+            each product in products
+              tr
+                td.col-md-1
+                  img(src="#{product.featuredImage}" class="img-responsive")
+                td
+                  a(href='/product/#{product.id}') #{product.name}
+                td #{product.unwatermark_count}
+
+
+
+
+
+

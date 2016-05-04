@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+
+require('dotenv').config();
+var models = require('../models');
+var fs = require('fs');
+var http = require('http');
+var https = require('https');
+var privateKey  = fs.readFileSync('ssl/file.pem');
+var certificate = fs.readFileSync('ssl/file.crt');
+
+var credentials = {
+  key: privateKey,
+  cert: certificate
+};
+var app = require('../app');
+
+models
+  .sequelize
+  .sync()
+  .then(() => {
+    var httpsServer = https.createServer(credentials, app).listen(3000, 'localhost');
+    var httpServer = http.createServer(app).listen(3001, 'localhost');
+  });
+

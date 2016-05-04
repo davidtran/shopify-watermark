@@ -1,0 +1,28 @@
+{
+  "name": "a",
+  "version": "0.0.1",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "components",
+    "bower_components",
+    "public/components",
+    "test",
+    "tests"
+  ],
+  "authors": [
+    "Nam Tran <nam.trankhanh.vn@gmail.com>"
+  ],
+  "description": "",
+  "main": "",
+  "moduleType": [],
+  "license": "MIT",
+  "homepage": "",
+  "dependencies": {
+    "bootstrap": "^3.3.6",
+    "spectrum": "^1.8.0",
+    "seiyria-bootstrap-slider": "^7.0.3",
+    "font-awesome": "fontawesome#^4.6.1",
+    "blockUI": "blockui#*"
+  }
+}
