@@ -6,3 +6,4 @@ sessions
 ssl
 .env
 public/css/*.css
+upload

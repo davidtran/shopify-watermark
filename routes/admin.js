@@ -7,6 +7,10 @@ var queueHelper = require('../helpers/queueHelper.js');
 var shopChecker = require('../middlewares/shopChecker.js');
 var fs = require('fs');
 var imageHelper = require('../helpers/imageHelper.js');
+var multer = require('multer');
+var upload = multer({
+  dest: 'upload/'
+})
 module.exports = router;
 
 process.on("unhandledRejection", function(reason, promise) {
@@ -23,10 +27,10 @@ router.get('/', shopChecker, (req, res) => {
       return res.render('admin/index', {
         form: defaultData.form,
         fontNames: defaultData.fontNames,
-        previewImageUrl: defaultData.previewImageUrl
+        previewImageUrl: defaultData.previewImageUrl,
+        shop: req.data.shop
       });
     })
-
 });
 
 function getPreviewDefaultData(req, mergeFormData) {
@@ -38,7 +42,8 @@ function getPreviewDefaultData(req, mergeFormData) {
     fontName: 'Arial',
     position: 'bottom-right',
     textColor: 'black',
-    opacity: 70
+    opacity: 70,
+    imageSize: 100
   }
 
   if (mergeFormData) {
@@ -67,7 +72,9 @@ function getPreviewDefaultData(req, mergeFormData) {
   var previewImage;
   return models
     .ProductImage
-    .findOne()
+    .findOne({
+      ShopId: req.data.shop.id
+    })
     .then(image => {
       previewImage = image;
       return imageHelper.getImagePath(image);
@@ -84,28 +91,59 @@ function getPreviewDefaultData(req, mergeFormData) {
 }
 
 
-router.post('/', shopChecker, (req, res) => {
-
+router.post('/', shopChecker, upload.single('image'), (req, res) => {
+  console.log(req.body, req.file);
   var error = validateRequest(req);
-  if (error) return res.render('admin/index', {
-    form: defaultData.form,
-    fontNames: defaultData.fontNames,
-    error: error
-  });
+  if (error) return res.status(500).send(error.message);
+
   var base64ImageResult, defaultDataResult;
   return getPreviewDefaultData(req, req.body)
     .then(defaultData => {
       defaultDataResult = defaultData;
-      return watermarkHelper
-        .createTextWatermark(
+      if (req.body.type == 'text') {
+        req.session.lastUploadedFile = null;
+        console.log('aabbb');
+        return watermarkHelper
+          .createTextWatermark(
+            defaultData.previewImagePath,
+            req.body.text,
+            req.body.fontSize,
+            req.body.position,
+            req.body.textColor,
+            req.body.fontName,
+            req.body.opacity,
+            'transparent');
+      } else if (!req.file && req.session.lastUploadedFile){
+        console.log('aa');
+        var lastUploadedFile = getFileFromSession(req);
+
+        return watermarkHelper.createImageWatermark(
           defaultData.previewImagePath,
-          req.body.text,
-          req.body.fontSize,
+          lastUploadedFile,
+          req.body.imageSize,
           req.body.position,
-          req.body.textColor,
-          req.body.fontName,
           req.body.opacity,
-          'transparent')   ;
+          'transparent'
+        )
+      } else if (req.file) {
+        console.log(req.file);
+        return getUploadedFilePath(req.file)
+          .then(uploadedPath => {
+            req.session.lastUploadedFile = uploadedPath;
+            return watermarkHelper.createImageWatermark(
+              defaultData.previewImagePath,
+              uploadedPath,
+              req.body.imageSize,
+              req.body.position,
+              req.body.opacity,
+              'transparent'
+            )
+          });
+      } else {
+        return res.status(400).send('Missing file');
+      }
+
+
     })
     .then((imagePath) => {
       return require('../helpers/base64Image.js').convertImageTo64(imagePath, true);
@@ -115,12 +153,18 @@ router.post('/', shopChecker, (req, res) => {
       res.status(200).send(base64Image);
     })
     .catch(err => {
+      console.log(err);
       res.status(500).send();
     });
 
 });
 
 router.post('/save-watermark', shopChecker, (req, res) => {
+  console.log(req.body);
+  if (req.body.type == 'image' && req.file == null) {
+    req.file = req.session.lastUploadedFile;
+  }
+
   var watermarkConfig = req.body;
   var shopifyImageHelper
   var api;
@@ -139,15 +183,33 @@ router.post('/save-watermark', shopChecker, (req, res) => {
     .then(config => {
       if (!config) {
         watermarkConfig.ShopId = shopModel.id
-        config = models.WatermarkConfig.build(watermarkConfig)
-      } else {
+        config = models.WatermarkConfig.build({
+          ShopId: shopModel.id
+        })
+      }
+      return config.save();
+
+    })
+    .then(config => {
+      if (req.body.type == 'text') {
         config.text = watermarkConfig.text;
         config.fontSize = watermarkConfig.fontSize;
         config.position = watermarkConfig.position;
         config.fontName = watermarkConfig.fontName;
         config.textColor = watermarkConfig.textColor;
         config.opacity = watermarkConfig.opacity;
+      } else {
+        return saveUploadedFile(req, config.id.toString())
+          .then(uploadedFile => {
+            config.imagePath = uploadedFile;
+            config.imageSize = watermarkConfig.imageSize;
+            config.opacity = watermarkConfig.opacity;
+            config.position = watermarkConfig.position;
+            return config.save();
+          });
+
       }
+
       return config.save();
     })
     .then(() => {
@@ -162,14 +224,12 @@ router.post('/save-watermark', shopChecker, (req, res) => {
     .then(images => {
       var delay = 0;
       var ps = [];
-      if (req.body.updateWatermark) {
+      if (req.body.updateWatermark && req.body.updateWatermark == 'true') {
         images.forEach(image => {
           delay += 150;
           ps.push(queueHelper.createWatermarkJob(image, delay));
         })
         return Promise.all(ps);
-      } else {
-        return res.sendStatus(200)
       }
     })
     .then(() => res.sendStatus(200))
@@ -208,7 +268,15 @@ router.post('/automatic-add-watermark', shopChecker, (req, res) => {
 })
 
 function validateRequest(req) {
-  if (!req.body.opacity || !req.body.text || !req.body.fontSize || !req.body.position || !req.body.textColor || !req.body.fontName) {
+  if (req.body.type == 'image') {
+    if (!(req.file || req.session.lastUploadedFile)) {
+      return new Error('Please select an image');
+    }
+
+    if (!req.body.imageSize || !req.body.opacity || !req.body.position) {
+      return new Error('Missing parameters for image watermark');
+    }
+  } else if (!req.body.opacity || !req.body.text || !req.body.fontSize || !req.body.position || !req.body.textColor) {
     return new Error('Please fill all fields');
   }
 
@@ -217,3 +285,53 @@ function validateRequest(req) {
     return new Error('Invalid opacity');
   }
 }
+
+function getFileFromSession(req) {
+  if (req.body.type == 'image' && !req.file && req.session.lastUploadedFile) {
+    return req.session.lastUploadedFile;
+  }
+  return null;
+}
+
+function saveUploadedFile(req, name) {
+  return new Promise((resolve, reject) => {
+    if (!req.session.lastUploadedFile) return reject(new Error('File not found'));
+    uploadedFile = req.session.lastUploadedFile
+    var ext = uploadedFile.substr(uploadedFile.lastIndexOf('.') + 1)
+    var saveFile = __dirname + '/../public/img/watermark-image/' + name + '.' + ext;
+    return fs.createReadStream(uploadedFile)
+      .pipe(fs.createWriteStream(saveFile))
+      .on('close', () => resolve(saveFile))
+      .on('error', err => reject(err))
+  })
+
+}
+
+function getUploadedFilePath(uploadedFile) {
+  return new Promise((resolve, reject) => {
+    var ext = getExtensionFromMimetype(uploadedFile.mimetype);
+    if (!ext) return reject(new Error('Invalid file type'));
+    var maxSize = 5242880; // 5MB
+    if (uploadedFile.size > maxSize) return reject(new Error('File is too large'));
+    var saveFile = uploadedFile.path + '.' + ext;
+    return fs.createReadStream(uploadedFile.path)
+      .pipe(fs.createWriteStream(saveFile))
+      .on('close', () => resolve(saveFile))
+      .on('error', err => reject(err))
+  });
+
+
+ }
+
+function getExtensionFromMimetype(mimetype) {
+  switch (mimetype) {
+    case 'image/png':
+      return 'png';
+    case 'image/jpeg':
+      return 'jpg';
+    case 'image/gif':
+      return 'gif';
+  }
+  return null;
+}
+

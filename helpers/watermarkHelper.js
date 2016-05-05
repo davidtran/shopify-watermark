@@ -4,7 +4,8 @@ var fs = require('fs');
 var util = require('util');
 
 module.exports = {
-  createTextWatermark: createTextWatermark
+  createTextWatermark: createTextWatermark,
+  createImageWatermark: createImageWatermark
 }
 
 function drawText(text, fontSize, textColor, fontName, opacity, backgroundColor, outfile) {
@@ -39,7 +40,6 @@ function createTextImage(text, fontSize, textColor, fontName, backgroundColor, o
       .gravity('Center')
       .fill(textColor)
       .fontSize(fontSize)
-      .font(fontName)
       .drawText(0, 0, text)
       .write(outfile, (err) => {
         if (err) return reject(err);
@@ -47,6 +47,8 @@ function createTextImage(text, fontSize, textColor, fontName, backgroundColor, o
       });
   });
 }
+
+
 
 function trimImage(filename) {
   return new Promise((resolve, reject) => {
@@ -99,10 +101,58 @@ function getTextImage(text, fontSize, textColor, fontName, opacity, backgroundCo
       }
     })
   })
+}
+
+function updateWatermarkImage(imagePath, imageSize, opacity, backgroundColor) {
+  return new Promise((resolve, reject) => {
+    var tempFile = __dirname + '/../public/img/' + new Date().getTime() + '-watermark.png';
+    return jimp.read(imagePath, (err, data) => {
+      if (err) return reject(err);
+      var scale = parseInt(imageSize) / 100;
+      var fade = parseInt(opacity);
+      fade = 100 - fade;
+      fade = fade / 100;
+      return data
+        .scale(scale)
+        .fade(fade)
+        .write(tempFile, (err) => {
+          if (err) return reject(err);
+          return resolve(tempFile);
+        })
+    })
+
+  })
 
 }
 
-function createTextWatermark(image,
+function createImageWatermark(file,
+                              watermarkFile,
+                              imageSize,
+                              position,
+                              opacity,
+                              backgroundColor) {
+  console.log(arguments);
+  return new Promise((resolve, reject) => {
+    var shortName = new Date().getTime().toString() + '.png';
+    var fullName = __dirname + '/../public/img/' + shortName;
+    return updateWatermarkImage(watermarkFile, imageSize, opacity, backgroundColor)
+      .then(tempFile => {
+        return getTextWatermarkPosition(file, tempFile, position)
+          .then(position => {
+            var watermarkOperator = 'image over ' + position.x + ',' + position.y + ' 0,0 ' + '"' + tempFile + '"';
+          return gm(file)
+            .draw([watermarkOperator])
+            .write(fullName, (err) => {
+              if (err) return reject(err);
+              return resolve(fullName);
+            });
+          });
+      });
+  });
+
+}
+
+function createTextWatermark(imagePath,
                              text,
                              fontSize,
                              textPosition,
@@ -111,18 +161,18 @@ function createTextWatermark(image,
                              opacity,
                              backgroundColor) {
   var shortName = new Date().getTime().toString() + '.png';
-
+  console.log(arguments);
   var fullName = __dirname + '/../public/img/' + shortName;
   var textImagePath;
   return new Promise((resolve, reject) => {
     return getTextImage(text, fontSize, textColor, fontName, opacity, backgroundColor)
       .then((textImagePathResult) => {
         textImagePath = textImagePathResult;
-        return getTextWatermarkPosition(image, textImagePath, textPosition);
+        return getTextWatermarkPosition(imagePath, textImagePath, textPosition);
       })
       .then((position) => {
         var watermarkOperator = 'image over ' + position.x + ',' + position.y + ' 0,0 ' + '"' + textImagePath + '"';
-        return gm(image)
+        return gm(imagePath)
           .draw([watermarkOperator])
           .write(fullName, (err) => {
             if (err) return reject(err);

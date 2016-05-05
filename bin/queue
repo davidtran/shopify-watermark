@@ -6,11 +6,11 @@ var queue = kue.createQueue();
 var watermarkProcessor = require('../jobs/watermark.js');
 var removeWatermarkProcessor = require('../jobs/removeWatermark.js');
 
-queue.process('watermark', 10, (job, ctx, done) => {
+queue.process('watermark', 3, (job, ctx, done) => {
   watermarkProcessor(job, ctx, done);
 });
 
-queue.process('removeWatermark', 10, (job, ctx, done) => {
+queue.process('removeWatermark', 3, (job, ctx, done) => {
   console.log(job);
   removeWatermarkProcessor(job, ctx, done);
 });

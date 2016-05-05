@@ -5,7 +5,7 @@ var shopifyApi = require('../helpers/shopifyApi');
 var authHelper = require('../helpers/authHelper.js');
 
 router.get('/login', (req, res) => {
- if (!req.query.shop) return res.render('400');
+ if (!req.query.shop) return res.render('instal/login_failed');
  var api;
 
  shopifyApi.getApi(req.query.shop)

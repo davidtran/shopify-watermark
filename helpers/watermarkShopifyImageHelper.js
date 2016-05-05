@@ -31,8 +31,8 @@ function processImage(image) {
         return getWatermarkConfig(image);
       })
       .then(watermarkConfig => {
-        console.log(watermarkConfig.toJSON())
-        return watermarkHelper.createTextWatermark(filename,
+        if (watermarkConfig.type == 'text') {
+          return watermarkHelper.createTextWatermark(filename,
                                                   watermarkConfig.text,
                                                   watermarkConfig.fontSize,
                                                   watermarkConfig.position,
@@ -40,6 +40,15 @@ function processImage(image) {
                                                   watermarkConfig.fontName,
                                                   watermarkConfig.opacity,
                                                   watermarkConfig.backgroundTextColor);
+        } else {
+          return watermarkHelper.createImageWatermark(filename,
+                                                      watermarkConfig.imagePath,
+                                                      watermarkConfig.imageSize,
+                                                      watermarkConfig.position,
+                                                      watermarkConfig.opacity,
+                                                      'transparent');
+        }
+
       })
       .then(resultWatermarkedFile => {
         watermarkedFile = resultWatermarkedFile;

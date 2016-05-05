@@ -18,7 +18,7 @@ models
   .sequelize
   .sync()
   .then(() => {
-    var httpsServer = https.createServer(credentials, app).listen(3000, 'localhost');
-    var httpServer = http.createServer(app).listen(3001, 'localhost');
+    var httpsServer = https.createServer(credentials, app).listen(process.env.HTTPS_PORT, 'localhost');
+    var httpServer = http.createServer(app).listen(process.env.HTTP_PORT, 'localhost');
   });
 

@@ -1,5 +1,8 @@
 module.exports = (sequelize, DataTypes) => {
   var WatermarkConfig = sequelize.define('WatermarkConfig', {
+    type: DataTypes.STRING,
+    imagePath: DataTypes.STRING,
+    imageSize: DataTypes.INTEGER(1),
     text: DataTypes.STRING,
     fontSize: DataTypes.INTEGER,
     position: DataTypes.STRING(20),

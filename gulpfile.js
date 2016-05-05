@@ -35,7 +35,7 @@ gulp.task('develop', function () {
 });
 
 gulp.task('tunnel', function() {
-  var tunnel = localtunnel(3001, {
+  var tunnel = localtunnel(3012, {
     subdomain: 'namtran1989'
   },function(err, tunnel) {
     console.log(err, tunnel);

@@ -23,6 +23,7 @@
     "spectrum": "^1.8.0",
     "seiyria-bootstrap-slider": "^7.0.3",
     "font-awesome": "fontawesome#^4.6.1",
-    "blockUI": "blockui#*"
+    "blockUI": "blockui#*",
+    "blueimp-file-upload": "^9.12.3"
   }
 }

@@ -10,6 +10,38 @@ block content
         preferredFormat: "hex",
         showInput: true,
         color: "#{form.textColor}"
+      });
+
+      selectWatermarkType('image')
+
+      function selectWatermarkType(type) {
+        $('form[name="watermarkConfig"] input, form[name="watermarkConfig"] select').each(function(index, field) {
+          var fieldType = $(field).data('type');
+          var name = $(field).attr('name')
+          var exclude = ['type', 'position', 'opacity', 'updateWatermark'];
+          if (fieldType != type && exclude.indexOf(name) == -1) {
+            $(field).parents('.form-group').hide();
+          } else {
+            $(field).parents('.form-group').show();
+          }
+        });
+      }
+
+      $('input[name="image"]').fileupload({
+        add: function(e, data) {
+          var formData = getWatermarkFormData();
+          data.formData = formData;
+          data.submit();
+        },
+        done: function(e, data) {
+          $('#previewImage').attr('src', 'data:image/jpeg;base64,' + data.result)
+        }
+      })
+
+      $('select[name="type"]').change(function() {
+        var type = $(this).val();
+        selectWatermarkType(type);
+        $(this).show();
       })
 
       $('input[name="automatic-add-watermark"]').change(function() {
@@ -34,7 +66,7 @@ block content
             $('#previewImage').attr('src', 'data:image/jpeg;base64,' + data)
           },
           error: function(err) {
-            alert('Error while making preview image');
+            alert(err.responseText);
           },
           complete: function() {
             $('#previewImage').unblock();
@@ -42,7 +74,11 @@ block content
         });
       }
 
-      $('form[name="watermarkConfig"] input, form[name="watermarkConfig"] select').change(function() {
+      $('form[name="watermarkConfig"] input, form[name="watermarkConfig"] select :not(select[name="type"])').change(function() {
+        var $field = $(this);
+        var exclude = ['image', 'type', 'updateWatermark'];
+        var name = $field.attr('name');
+        if (exclude.indexOf(name) != -1) return;
         checkFormAndUpdatePreviewImage();
       });
 
@@ -74,6 +110,7 @@ block content
           success: function() {
             $('p.save-success').show();
             $('p.save-error').hide();
+            $('input[name="updateWatermark"]').attr('checked', null)
           },
           error: function(err) {
             console.log(err);
@@ -109,7 +146,12 @@ block content
         value: #{form.opacity}
       });
 
-
+      $('input[name="imageSize"]').slider({
+        min: 0,
+        max: 100,
+        step: 1,
+        value: #{form.imageSize}
+      })
       $('#btnRestore').click(function(e) {
         e.preventDefault();
         var restore = confirm('This action will remove watermark from ALL of your images. Do you want to continue?');
@@ -142,20 +184,34 @@ block content
 
         form(name='watermarkConfig' method='post')
           .form-group
+            label Watermark Type
+            select(name="type" class="form-control")
+              option(value="image") Image
+              option(value="text") Text
+          .form-group
             label Text
-            input(type='text' name='text' class='form-control' value="#{form.text}")
+            input(type='text' name='text' class='form-control' value="#{form.text}" data-type="text")
+          .form-group
+            label Image
+            input(type="file" name='image' class='form-control' data-type='image' data-url="/admin")
+          .form-group
+            label Image size
+            br
+            input(type='text' name='imageSize' data-type='image' value='#{form.imageSize}')
           .form-group
             label Font size
-            input(type='number' name='fontSize' class='form-control' value="#{form.fontSize}")
-          .form-group
-            label Font name
-            select(name='fontName' class='form-control')
-              for font in fontNames
-                option(value="#{font}" selected=form.fontName == font) #{font}
+            input(type='number' name='fontSize' class='form-control' value="#{form.fontSize}" data-type="text")
+          //
+            .form-group
+              label Font name
+              select(name='fontName' class='form-control')
+                for font in fontNames
+                  option(value="#{font}" selected=form.fontName == font) #{font}
+          input(type='hidden' name='fontName')
           .form-group
             label Text Color &nbsp;
             br
-            input(type='text' name='textColor' id='textColor' value="#{form.textColor}")
+            input(type='text' name='textColor' id='textColor' value="#{form.textColor}" data-type="text")
           .form-group
             label Text position
             input(type='hidden' value='#{form.position}' name='position')
@@ -216,6 +272,6 @@ block content
           form
             .checkbox.col-md-6
               label
-                input(type="checkbox" name="automatic-add-watermark")
+                input(type="checkbox" name="automatic-add-watermark" checked=shop.autoWatermark)
                 | Automatically add watermark for new images
-            a#btnRestore.btn.btn-default.pull-right Restore your images
+            a#btnRestore.btn.btn-default.pull-right(title="Remove watermark and restore your images") Restore your images
