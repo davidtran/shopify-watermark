@@ -13,7 +13,7 @@ process.on("rejectionHandled", function(promise) {
 });
 
 router.get('/login', (req, res) => {
- if (!req.query.shop) return res.render('instal/login_failed');
+ if (!req.query.shop) return res.render('install/login_failed');
  var api;
 
  console.log(req.query);

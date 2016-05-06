@@ -4,21 +4,13 @@ require('dotenv').config();
 var models = require('../models');
 var fs = require('fs');
 var http = require('http');
-var https = require('https');
-var privateKey  = fs.readFileSync(process.env.SSL_KEY);
-var certificate = fs.readFileSync(process.env.SSL_CRT);
 
-var credentials = {
-  key: privateKey,
-  cert: certificate
-};
 var app = require('../app');
 
 models
   .sequelize
   .sync()
   .then(() => {
-    var httpsServer = https.createServer(credentials, app).listen(process.env.HTTPS_PORT, 'localhost');
     var httpServer = http.createServer(app).listen(process.env.HTTP_PORT, 'localhost');
   });
 
