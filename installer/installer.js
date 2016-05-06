@@ -1,7 +1,7 @@
 var Promise = require('bluebird');
 var models = require('../models');
-var ProductImporter = require('./productImporter.js');
 var WebhookInstaller = require('./webhookInstaller.js');
+var queueHelper = require('../helpers/queueHelper')
 
 module.exports = Installer;
 
@@ -89,9 +89,7 @@ Installer.prototype.getToken = function() {
 
 Installer.prototype.importProduct = function() {
   var _this = this;
-  var productImporter = new ProductImporter(_this.api);
-  console.log(_this.api);
-  return productImporter.import(_this.api.config.shop);
+  return queueHelper.createImportProductJob(_this.shopModel.id)
 }
 
 Installer.prototype.installWebhook = function() {

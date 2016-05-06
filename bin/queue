@@ -5,14 +5,18 @@ var kue = require('kue');
 var queue = kue.createQueue();
 var watermarkProcessor = require('../jobs/watermark.js');
 var removeWatermarkProcessor = require('../jobs/removeWatermark.js');
+var importProductProcessor = require('../jobs/importProduct.js')
 
 queue.process('watermark', 3, (job, ctx, done) => {
   watermarkProcessor(job, ctx, done);
 });
 
 queue.process('removeWatermark', 3, (job, ctx, done) => {
-  console.log(job);
   removeWatermarkProcessor(job, ctx, done);
 });
+
+queue.process('importProduct', (job, ctx, done) => {
+  importProductProcessor(job, ctx, done);
+})
 
 console.log('Queue is ready to process jobs');

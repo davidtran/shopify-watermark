@@ -2,6 +2,20 @@ var kue = require('kue'),
     queue = kue.createQueue(),
     Promise = require('bluebird')
 
+function createImportProductJob(shopId) {
+  return new Promise((resolve, reject) => {
+    return queue.create('importProduct', {
+      shopId: shopId
+    })
+    .attempts(5)
+    .ttl(120000)
+    .save(err => {
+      if (err) return reject(err);
+      return resolve();
+    })
+  })
+}
+
 function createWatermarkJob(image, delay) {
   return new Promise((resolve, reject) => {
 
@@ -57,5 +71,6 @@ function removeWatermark(imageId, delay) {
 
 module.exports = {
   createWatermarkJob: createWatermarkJob,
-  removeWatermark: removeWatermark
+  removeWatermark: removeWatermark,
+  createImportProductJob: createImportProductJob
 }

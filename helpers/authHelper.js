@@ -17,17 +17,15 @@ function isShopInstalled(query) {
     var shop = null;
     return models
       .Shop
-      .find({
+      .findOne({
         where: {
           shop: shopName
         }
       })
       .then((shopData) => {
         shop = shopData;
-        if (!shop) return resolve(false);
-        if (shop.token) {
-          return resolve(true);
-        }
+        if (!shop || !shop.isInstalled) return resolve(false);
+        return resolve(true);
       })
       .catch(err => reject(err));
   })

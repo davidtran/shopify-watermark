@@ -4,9 +4,19 @@ var Installer = require('../installer/installer.js');
 var shopifyApi = require('../helpers/shopifyApi');
 var authHelper = require('../helpers/authHelper.js');
 
+process.on("unhandledRejection", function(reason, promise) {
+    console.log(reason, promise);
+});
+
+process.on("rejectionHandled", function(promise) {
+    console.log(promise);
+});
+
 router.get('/login', (req, res) => {
  if (!req.query.shop) return res.render('instal/login_failed');
  var api;
+
+ console.log(req.query);
 
  shopifyApi.getApi(req.query.shop)
   .then(tempApi => {
@@ -14,6 +24,7 @@ router.get('/login', (req, res) => {
     return authHelper.isShopInstalled(req.query);
   })
   .then(isInstalled => {
+    console.log(isInstalled);
     if (isInstalled) {
       if (api.is_valid_signature(req.query, true)){
         req.session.shop = req.query.shop.split('.')[0];
@@ -44,7 +55,7 @@ router.get('/callback', (req, res) => {
       req.session.shop = req.query.shop.split('.')[0];
       return res.redirect('/admin?shop=' + req.query.shop);
     })
-    .error(err => {
+    .catch(err => {
 
       return res.render('500', {
         err: err

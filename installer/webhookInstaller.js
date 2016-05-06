@@ -39,6 +39,7 @@ WebhookInstaller.prototype.installProductWebhook = function() {
 WebhookInstaller.prototype.installHook = function(hookData) {
   var _this = this;
   return new Promise((resolve, reject) => {
+    return resolve();
     return _this.api.post('/admin/webhooks.json', {
       webhook: hookData
     }, (err, data) => {

@@ -68,25 +68,38 @@ function getPreviewDefaultData(req, mergeFormData) {
     'Verdana',
     'Gill Sans'
   ];
+  return new Promise((resolve, reject) => {
+    var previewImage;
+    return models
+      .ProductImage
+      .findOne({
+        ShopId: req.data.shop.id
+      })
+      .then(image => {
+        if (!image) {
+          return resolve({
+            form: form,
+            fontNames: fontNames,
+            previewImageUrl: '/img/default/preview.jpg',
+            previewImagePath: __dirname + '/../public/img/default/preview.jpg'
+          })
+        } else {
+          previewImage = image;
+          return imageHelper.getImagePath(image);
+        }
 
-  var previewImage;
-  return models
-    .ProductImage
-    .findOne({
-      ShopId: req.data.shop.id
-    })
-    .then(image => {
-      previewImage = image;
-      return imageHelper.getImagePath(image);
-    })
-    .then(path => {
-      return {
-        form: form,
-        fontNames: fontNames,
-        previewImageUrl: previewImage.src,
-        previewImagePath: path
-      }
-    })
+      })
+      .then(path => {
+        return resolve({
+          form: form,
+          fontNames: fontNames,
+          previewImageUrl: previewImage.src,
+          previewImagePath: path
+        })
+      })
+      .catch(err => reject(err))
+  })
+
 
 }
 
