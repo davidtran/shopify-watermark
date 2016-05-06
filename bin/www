@@ -5,8 +5,8 @@ var models = require('../models');
 var fs = require('fs');
 var http = require('http');
 var https = require('https');
-var privateKey  = fs.readFileSync('ssl/file.pem');
-var certificate = fs.readFileSync('ssl/file.crt');
+var privateKey  = fs.readFileSync(process.env.SSL_KEY);
+var certificate = fs.readFileSync(process.env.SSL_CRT);
 
 var credentials = {
   key: privateKey,
