@@ -38,16 +38,15 @@ app.use(session({
   secret: 'keyboard cat',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: true }
+  cookie: { secure: false }
 }))
 app.use(express.static(path.join(__dirname, 'public')));
 
-var subdomain = process.env.SUB_DOMAIN;
-app.use(subdomain + '/', routes);
-app.use(subdomain +'/install' , routeInstall);
-app.use(subdomain + '/admin', routeAdmin);
-app.use(subdomain + '/webhooks', routeWebhooks);
-app.use(subdomain + '/product', routeProduct);
+app.use('/', routes);
+app.use('/install' , routeInstall);
+app.use('/admin', routeAdmin);
+app.use('/webhooks', routeWebhooks);
+app.use('/product', routeProduct);
 /// catch 404 and forward to error handler
 app.use(function(req, res, next) {
     var err = new Error('Not Found');
