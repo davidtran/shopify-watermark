@@ -27,7 +27,7 @@ router.get('/login', (req, res) => {
     if (isInstalled) {
       if (api.is_valid_signature(req.query, true)){
         req.session.shop = req.query.shop.split('.')[0];
-        return res.redirect(process.env.SUB_DOMAIN + '/admin');
+        return res.redirect('/admin');
       } else {
         return res.render('install/login_failed');
       }
@@ -52,7 +52,7 @@ router.get('/callback', (req, res) => {
     })
     .then(() => {
       req.session.shop = req.query.shop.split('.')[0];
-      return res.redirect(process.env.SUB_DOMAIN + '/admin?shop=' + req.query.shop);
+      return res.redirect('/admin?shop=' + req.query.shop);
     })
     .catch(err => {
 
